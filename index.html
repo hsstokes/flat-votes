@@ -73,6 +73,31 @@
             border-radius: 5px;
             margin: 20px 0;
         }
+        .timestamp {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+        .button-group {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        .action-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .save-button {
+            background: #4caf50;
+            color: white;
+        }
+        .reset-button {
+            background: #f44336;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -127,11 +152,17 @@
     <div class="vote-summary" id="voteSummary">
         <h4>Overall Vote Status:</h4>
         <div id="unanimousStatus">Waiting for all votes...</div>
+        <div id="lastUpdated" class="timestamp"></div>
     </div>
 
     <div>
         <p>Comments:</p>
-        <textarea class="comment-box" placeholder="Add your comments here..."></textarea>
+        <textarea class="comment-box" id="commentBox" placeholder="Add your comments here..."></textarea>
+    </div>
+
+    <div class="button-group">
+        <button class="action-button save-button" onclick="saveAll()">Save All</button>
+        <button class="action-button reset-button" onclick="resetAll()">Reset All</button>
     </div>
 
 <script>
@@ -143,28 +174,24 @@ let votes = {
     flat5: null
 };
 
-window.addEventListener('load', loadVotes);
+let lastUpdated = null;
+
+window.addEventListener('load', loadAll);
 
 function select(btn, flatId) {
-    // Remove selection from other buttons in same group
     let parent = btn.parentElement;
     parent.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
     
-    // Select this button
     btn.classList.add('selected');
     
-    // Update status text
     let statusElement = document.getElementById(flatId + 'Text');
     statusElement.textContent = 'Selected: ' + btn.textContent;
 
-    // Store vote
     votes[flatId] = btn.textContent === '👍';
-
-    // Check unanimous status
-    checkUnanimous();
+    lastUpdated = new Date();
     
-    // Save votes to storage
-    saveVotes();
+    checkUnanimous();
+    updateTimestamp();
 }
 
 function checkUnanimous() {
@@ -191,22 +218,53 @@ function checkUnanimous() {
     }
 }
 
-async function loadVotes() {
+function updateTimestamp() {
+    if (lastUpdated) {
+        document.getElementById('lastUpdated').textContent = 
+            `Last updated: ${lastUpdated.toLocaleString()}`;
+    }
+}
+
+function saveAll() {
     try {
-        // Here we'll need to implement the new storage method
-        // For now, we can use localStorage as a temporary solution
-        const savedVotes = localStorage.getItem('buildingVotes');
-        if (savedVotes) {
-            votes = JSON.parse(savedVotes);
+        const voteData = {
+            votes: votes,
+            timestamp: lastUpdated?.toISOString(),
+            comments: document.getElementById('commentBox').value,
+            action: document.querySelector('.action-input').value
+        };
+        localStorage.setItem('buildingData', JSON.stringify(voteData));
+        alert('All data saved successfully!');
+    } catch (error) {
+        console.error('Error saving data:', error);
+        alert('Error saving data!');
+    }
+}
+
+function loadAll() {
+    try {
+        const savedData = localStorage.getItem('buildingData');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            votes = data.votes;
+            lastUpdated = data.timestamp ? new Date(data.timestamp) : null;
+            
+            // Restore votes
             Object.keys(votes).forEach(flat => {
                 if (votes[flat] !== null) {
                     selectSavedVote(flat, votes[flat]);
                 }
             });
+            
+            // Restore comments and action
+            document.getElementById('commentBox').value = data.comments || '';
+            document.querySelector('.action-input').value = data.action || '';
+            
             checkUnanimous();
+            updateTimestamp();
         }
     } catch (error) {
-        console.error('Error loading votes:', error);
+        console.error('Error loading data:', error);
     }
 }
 
@@ -222,12 +280,10 @@ function selectSavedVote(flat, isUpvote) {
     statusElement.textContent = 'Selected: ' + selectedBtn.textContent;
 }
 
-function saveVotes() {
-    try {
-        // Temporary solution using localStorage
-        localStorage.setItem('buildingVotes', JSON.stringify(votes));
-    } catch (error) {
-        console.error('Error saving votes:', error);
+function resetAll() {
+    if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
+        localStorage.removeItem('buildingData');
+        location.reload();
     }
 }
 </script>
