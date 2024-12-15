@@ -1,7 +1,5 @@
 {
-    "flat1": {"up": 0, "down": 0},
-    "flat2": {"up": 0, "down": 0},
-    "flat3": {"up": 0, "down": 0},
-    "flat4": {"up": 0, "down": 0},
-    "flat5": {"up": 0, "down": 0}
+  "sonnet1": 0,
+  "sonnet2": 0,
+  "sonnet3": 0
 }
