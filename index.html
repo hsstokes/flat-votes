@@ -157,6 +157,20 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const db = firebase.firestore();
+        // Load saved votes from Firestore when page loads
+db.collection("votes").get().then((querySnapshot) => {
+    querySnapshot.forEach((doc) => {
+        const vote = doc.data();
+        // Find the button for this flat and update its selected state
+        const flatContainer = document.querySelector(`[data-flat="${vote.flatId}"]`);
+        if (flatContainer) {
+            const btn = flatContainer.querySelector(vote.vote ? '.thumbsup' : '.thumbsdown');
+            if (btn) {
+                btn.classList.add('selected');
+            }
+        }
+    });
+});
 
 // Modify the select function to also save to Firestore
 function select(btn, type) {
