@@ -166,6 +166,31 @@
     </div>
 
 <script>
+    // Add these new constants first
+const GITHUB_REPO = 'hsstokes/flat-votes';
+const ISSUE_TITLE = 'Building Management Votes';
+
+async function createOrGetIssue() {
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues`);
+    const issues = await response.json();
+    let votingIssue = issues.find(issue => issue.title === ISSUE_TITLE);
+    
+    if (!votingIssue) {
+        const createResponse = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: ISSUE_TITLE,
+                body: 'Building management voting session'
+            })
+        });
+        votingIssue = await createResponse.json();
+    }
+    return votingIssue;
+}
 let votes = {
     flat1: null,
     flat2: null,
@@ -225,7 +250,9 @@ function updateTimestamp() {
     }
 }
 
-function saveAll() {
+
+// Replace your saveAll function with this:
+async function saveAll() {
     try {
         const voteData = {
             votes: votes,
@@ -233,19 +260,39 @@ function saveAll() {
             comments: document.getElementById('commentBox').value,
             action: document.querySelector('.action-input').value
         };
-        localStorage.setItem('buildingData', JSON.stringify(voteData));
-        alert('All data saved successfully!');
+
+        const issue = await createOrGetIssue();
+        
+        await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues/${issue.number}/comments`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                body: JSON.stringify(voteData)
+            })
+        });
+
+        alert('All data saved successfully to GitHub!');
     } catch (error) {
         console.error('Error saving data:', error);
-        alert('Error saving data!');
+        alert('Error saving data to GitHub!');
     }
 }
 
-function loadAll() {
+// Replace your loadAll function with this:
+async function loadAll() {
     try {
-        const savedData = localStorage.getItem('buildingData');
-        if (savedData) {
-            const data = JSON.parse(savedData);
+        const issue = await createOrGetIssue();
+        const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues/${issue.number}/comments`);
+        const comments = await response.json();
+        
+        if (comments.length > 0) {
+            // Get the latest comment
+            const latestComment = comments[comments.length - 1];
+            const data = JSON.parse(latestComment.body);
+            
             votes = data.votes;
             lastUpdated = data.timestamp ? new Date(data.timestamp) : null;
             
@@ -267,7 +314,6 @@ function loadAll() {
         console.error('Error loading data:', error);
     }
 }
-
 function selectSavedVote(flat, isUpvote) {
     const parent = document.querySelector(`.flat-row:has([onclick*="${flat}"])`);
     const buttons = parent.querySelectorAll('.emoji-btn');
