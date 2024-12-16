@@ -6,7 +6,10 @@
     <!-- Add Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    <style>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
         /* Previous CSS remains the same */
         body {
             font-family: Arial, sans-serif;
@@ -153,6 +156,27 @@
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
+        const db = firebase.firestore();
+
+// Modify the select function to also save to Firestore
+function select(btn, type) {
+    // Keep your existing code here
+    
+    // Add this new part to save to Firestore
+    db.collection("votes").add({
+        flatId: type,
+        vote: btn.textContent === '👍',
+        action: document.getElementById('actionInput').value,
+        timestamp: new Date(),
+        comments: document.getElementById('commentBox').value
+    })
+    .then(() => {
+        console.log("Vote saved to Firestore!");
+    })
+    .catch((error) => {
+        console.error("Error saving vote: ", error);
+    });
+}      
         
         // Create a unique ID for this action (you might want to manage this differently)
         const actionId = new Date().getTime().toString();
