@@ -181,7 +181,7 @@ function select(btn, type) {
         flatId: type,
         vote: btn.textContent === '👍',
         action: document.getElementById('actionInput').value,
-        timestamp: new Date(),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         comments: document.getElementById('commentBox').value
     })
     .then(() => {
