@@ -266,7 +266,14 @@ function updateTimestamp() {
 }
 
 
-// Replace your saveAll function with this:
+// Replace the GitHub save functionality with Firebase
+const firebaseConfig = {
+    // Your Firebase config here
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 async function saveAll() {
     try {
         const voteData = {
@@ -276,23 +283,11 @@ async function saveAll() {
             action: document.querySelector('.action-input').value
         };
 
-        const issue = await createOrGetIssue();
-        
-        await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues/${issue.number}/comments`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${GITHUB_TOKEN}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                body: JSON.stringify(voteData)
-            })
-        });
-
-        alert('All data saved successfully to GitHub!');
+        await db.collection('votes').add(voteData);
+        alert('All data saved successfully!');
     } catch (error) {
         console.error('Error saving data:', error);
-        alert('Error saving data to GitHub!');
+        alert('Error saving data!');
     }
 }
 
