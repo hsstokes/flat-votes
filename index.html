@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Add Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
+        /* Previous CSS remains the same */
         body {
             font-family: Arial, sans-serif;
             max-width: 600px;
@@ -73,31 +77,6 @@
             border-radius: 5px;
             margin: 20px 0;
         }
-        .timestamp {
-            font-size: 12px;
-            color: #666;
-            margin-top: 10px;
-        }
-        .button-group {
-            margin: 20px 0;
-            display: flex;
-            gap: 10px;
-        }
-        .action-button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .save-button {
-            background: #4caf50;
-            color: white;
-        }
-        .reset-button {
-            background: #f44336;
-            color: white;
-        }
     </style>
 </head>
 <body>
@@ -108,7 +87,7 @@
 
     <div class="action-box">
         <label><strong>Action Required:</strong></label>
-        <input type="text" class="action-input" placeholder="Enter the required action/task here...">
+        <input type="text" id="actionInput" class="action-input" placeholder="Enter the required action/task here...">
         <div style="font-size: 12px; color: #666; margin-top: 5px;">
             Example: "Check windows installation in all flats"
         </div>
@@ -152,196 +131,134 @@
     <div class="vote-summary" id="voteSummary">
         <h4>Overall Vote Status:</h4>
         <div id="unanimousStatus">Waiting for all votes...</div>
-        <div id="lastUpdated" class="timestamp"></div>
     </div>
 
-   <div>
-    <p>Comments:</p>
-    <textarea class="comment-box" id="commentBox" placeholder="Add your comments here..."></textarea>
-</div>
-
-<!-- GitHub Discussions link -->
-<div style="margin: 20px 0;">
-    <a href="https://github.com/hsstokes/flat-votes/discussions" 
-       target="_blank" 
-       style="background-color: #2ea44f; 
-              color: white; 
-              padding: 10px 20px; 
-              text-decoration: none; 
-              border-radius: 6px;
-              display: inline-block;
-              margin-top: 10px;">
-        👥 View & Add Votes/Comments on GitHub
-    </a>
-</div>
-
-    <div class="button-group">
-        <button class="action-button save-button" onclick="saveAll()">Save All</button>
-        <button class="action-button reset-button" onclick="resetAll()">Reset All</button>
+    <div>
+        <p>Comments:</p>
+        <textarea id="commentBox" class="comment-box" placeholder="Add your comments here..."></textarea>
     </div>
 
-<script>
-    // Add these new constants first
-const GITHUB_REPO = 'hsstokes/flat-votes';
-const ISSUE_TITLE = 'Building Management Votes';
-
-async function createOrGetIssue() {
-    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues`);
-    const issues = await response.json();
-    let votingIssue = issues.find(issue => issue.title === ISSUE_TITLE);
-    
-    if (!votingIssue) {
-        const createResponse = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${GITHUB_TOKEN}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title: ISSUE_TITLE,
-                body: 'Building management voting session'
-            })
-        });
-        votingIssue = await createResponse.json();
-    }
-    return votingIssue;
-}
-let votes = {
-    flat1: null,
-    flat2: null,
-    flat3: null,
-    flat4: null,
-    flat5: null
-};
-
-let lastUpdated = null;
-
-window.addEventListener('load', loadAll);
-
-function select(btn, flatId) {
-    let parent = btn.parentElement;
-    parent.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
-    
-    btn.classList.add('selected');
-    
-    let statusElement = document.getElementById(flatId + 'Text');
-    statusElement.textContent = 'Selected: ' + btn.textContent;
-
-    votes[flatId] = btn.textContent === '👍';
-    lastUpdated = new Date();
-    
-    checkUnanimous();
-    updateTimestamp();
-}
-
-function checkUnanimous() {
-    let statusDiv = document.getElementById('unanimousStatus');
-    let allVoted = Object.values(votes).every(v => v !== null);
-    
-    if (!allVoted) {
-        statusDiv.textContent = 'Waiting for all votes...';
-        return;
-    }
-
-    let allApproved = Object.values(votes).every(v => v === true);
-    let allRejected = Object.values(votes).every(v => v === false);
-
-    if (allApproved) {
-        statusDiv.textContent = '✅ Unanimous Approval';
-        statusDiv.style.color = 'green';
-    } else if (allRejected) {
-        statusDiv.textContent = '❌ Unanimous Rejection';
-        statusDiv.style.color = 'red';
-    } else {
-        statusDiv.textContent = '⚠️ Mixed Votes';
-        statusDiv.style.color = 'orange';
-    }
-}
-
-function updateTimestamp() {
-    if (lastUpdated) {
-        document.getElementById('lastUpdated').textContent = 
-            `Last updated: ${lastUpdated.toLocaleString()}`;
-    }
-}
-
-
-// Replace the GitHub save functionality with Firebase
-const firebaseConfig = {
-    // Your Firebase config here
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-async function saveAll() {
-    try {
-        const voteData = {
-            votes: votes,
-            timestamp: lastUpdated?.toISOString(),
-            comments: document.getElementById('commentBox').value,
-            action: document.querySelector('.action-input').value
+    <script>
+        // Firebase configuration - Replace with your Firebase config
+        const firebaseConfig = {
+            // Your Firebase config object here
         };
 
-        await db.collection('votes').add(voteData);
-        alert('All data saved successfully!');
-    } catch (error) {
-        console.error('Error saving data:', error);
-        alert('Error saving data!');
-    }
-}
-
-// Replace your loadAll function with this:
-async function loadAll() {
-    try {
-        const issue = await createOrGetIssue();
-        const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues/${issue.number}/comments`);
-        const comments = await response.json();
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
         
-        if (comments.length > 0) {
-            // Get the latest comment
-            const latestComment = comments[comments.length - 1];
-            const data = JSON.parse(latestComment.body);
-            
-            votes = data.votes;
-            lastUpdated = data.timestamp ? new Date(data.timestamp) : null;
-            
-            // Restore votes
-            Object.keys(votes).forEach(flat => {
-                if (votes[flat] !== null) {
-                    selectSavedVote(flat, votes[flat]);
-                }
-            });
-            
-            // Restore comments and action
-            document.getElementById('commentBox').value = data.comments || '';
-            document.querySelector('.action-input').value = data.action || '';
-            
-            checkUnanimous();
-            updateTimestamp();
-        }
-    } catch (error) {
-        console.error('Error loading data:', error);
-    }
-}
-function selectSavedVote(flat, isUpvote) {
-    const parent = document.querySelector(`.flat-row:has([onclick*="${flat}"])`);
-    const buttons = parent.querySelectorAll('.emoji-btn');
-    buttons.forEach(b => b.classList.remove('selected'));
-    
-    const selectedBtn = buttons[isUpvote ? 0 : 1];
-    selectedBtn.classList.add('selected');
-    
-    const statusElement = document.getElementById(flat + 'Text');
-    statusElement.textContent = 'Selected: ' + selectedBtn.textContent;
-}
+        // Create a unique ID for this action (you might want to manage this differently)
+        const actionId = new Date().getTime().toString();
+        const actionRef = database.ref('actions/' + actionId);
 
-function resetAll() {
-    if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
-        localStorage.removeItem('buildingData');
-        location.reload();
-    }
-}
-</script>
+        let votes = {
+            flat1: null,
+            flat2: null,
+            flat3: null,
+            flat4: null,
+            flat5: null
+        };
+
+        // Listen for action input changes
+        document.getElementById('actionInput').addEventListener('input', function(e) {
+            actionRef.child('actionText').set(e.target.value);
+        });
+
+        // Listen for comment changes
+        document.getElementById('commentBox').addEventListener('input', function(e) {
+            actionRef.child('comments').set(e.target.value);
+        });
+
+        function select(btn, type) {
+            // Remove selection from other buttons in same group
+            let parent = btn.parentElement;
+            parent.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+            
+            // Select this button
+            btn.classList.add('selected');
+            
+            // Update status text
+            let statusElement = document.getElementById(type + 'Text');
+            statusElement.textContent = 'Selected: ' + btn.textContent;
+
+            // Store vote in Firebase
+            const vote = btn.textContent === '👍';
+            actionRef.child('votes').child(type).set(vote);
+
+            // Update local votes object
+            votes[type] = vote;
+
+            // Check unanimous status
+            checkUnanimous();
+        }
+
+        function checkUnanimous() {
+            let statusDiv = document.getElementById('unanimousStatus');
+            let allVoted = Object.values(votes).every(v => v !== null);
+            
+            if (!allVoted) {
+                statusDiv.textContent = 'Waiting for all votes...';
+                return;
+            }
+
+            let allApproved = Object.values(votes).every(v => v === true);
+            let allRejected = Object.values(votes).every(v => v === false);
+
+            if (allApproved) {
+                statusDiv.textContent = '✅ Unanimous Approval';
+                statusDiv.style.color = 'green';
+            } else if (allRejected) {
+                statusDiv.textContent = '❌ Unanimous Rejection';
+                statusDiv.style.color = 'red';
+            } else {
+                statusDiv.textContent = '⚠️ Mixed Votes';
+                statusDiv.style.color = 'orange';
+            }
+
+            // Store status in Firebase
+            actionRef.child('status').set(statusDiv.textContent);
+        }
+
+        // Listen for changes in Firebase
+        actionRef.child('votes').on('value', (snapshot) => {
+            const firebaseVotes = snapshot.val();
+            if (firebaseVotes) {
+                votes = firebaseVotes;
+                // Update UI to reflect votes
+                Object.keys(votes).forEach(flatId => {
+                    const buttons = document.querySelectorAll(`button[onclick*="${flatId}"]`);
+                    buttons.forEach(btn => {
+                        btn.classList.remove('selected');
+                        if ((btn.textContent === '👍' && votes[flatId] === true) ||
+                            (btn.textContent === '👎' && votes[flatId] === false)) {
+                            btn.classList.add('selected');
+                        }
+                    });
+                    const statusElement = document.getElementById(flatId + 'Text');
+                    if (votes[flatId] !== null) {
+                        statusElement.textContent = 'Selected: ' + (votes[flatId] ? '👍' : '👎');
+                    }
+                });
+                checkUnanimous();
+            }
+        });
+
+        // Listen for action text changes
+        actionRef.child('actionText').on('value', (snapshot) => {
+            const actionText = snapshot.val();
+            if (actionText) {
+                document.getElementById('actionInput').value = actionText;
+            }
+        });
+
+        // Listen for comment changes
+        actionRef.child('comments').on('value', (snapshot) => {
+            const comments = snapshot.val();
+            if (comments) {
+                document.getElementById('commentBox').value = comments;
+            }
+        });
+    </script>
 </body>
 </html>
