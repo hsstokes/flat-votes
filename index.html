@@ -296,39 +296,44 @@
     }
 
     function setupListeners(actionRef) {
-        // Event Listeners for inputs
-        document.getElementById('actionInput').addEventListener('input', function(e) {
-            actionRef.child('actionText').set(e.target.value);
+    // Event Listeners for inputs
+    document.getElementById('actionInput').addEventListener('input', function(e) {
+        db.collection('actions').doc(actionId).update({
+            actionText: e.target.value
         });
+    });
 
-        document.getElementById('commentBox').addEventListener('input', function(e) {
-            actionRef.child('comments').set(e.target.value);
+    document.getElementById('commentBox').addEventListener('input', function(e) {
+        db.collection('actions').doc(actionId).update({
+            comments: e.target.value
         });
+    });
 
-        // Firebase Realtime Database Listeners
-        actionRef.child('votes').on('value', (snapshot) => {
-            const firebaseVotes = snapshot.val();
-            if (firebaseVotes) {
-                votes = firebaseVotes;
-                updateVoteDisplay();
-                checkUnanimous();
+    // Firestore Realtime Listeners
+    db.collection('actions').doc(actionId)
+        .onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                
+                // Update votes
+                if (data.votes) {
+                    votes = data.votes;
+                    updateVoteDisplay();
+                    checkUnanimous();
+                }
+
+                // Update action text
+                if (data.actionText) {
+                    document.getElementById('actionInput').value = data.actionText;
+                }
+
+                // Update comments
+                if (data.comments) {
+                    document.getElementById('commentBox').value = data.comments;
+                }
             }
         });
-
-        actionRef.child('actionText').on('value', (snapshot) => {
-            const actionText = snapshot.val();
-            if (actionText) {
-                document.getElementById('actionInput').value = actionText;
-            }
-        });
-
-        actionRef.child('comments').on('value', (snapshot) => {
-            const comments = snapshot.val();
-            if (comments) {
-                document.getElementById('commentBox').value = comments;
-            }
-        });
-    }
+}
 </script>
 </body>
 </html>
