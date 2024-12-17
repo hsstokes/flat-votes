@@ -138,166 +138,157 @@
         <textarea id="commentBox" class="comment-box" placeholder="Add your comments here..."></textarea>
     </div>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDkfId7afSaL9xzWcc_CybtDHNdkuGW9Rk",
-    authDomain: "flat-votes-firebase.firebaseapp.com",
-    projectId: "flat-votes-firebase",
-    storageBucket: "flat-votes-firebase.appspot.com",  // corrected from .firebasestore.app to .appspot.com
-    messagingSenderId: "9375093507",
-    appId: "1:9375093507:web:9784aef425d44a1e109f2a",
-    measurementId: "G-DZG1YTDYVT"
-};‹
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDkfId7afSaL9xzWcc_CybtDHNdkuGW9Rk",
+        authDomain: "flat-votes-firebase.firebaseapp.com",
+        projectId: "flat-votes-firebase",
+        storageBucket: "flat-votes-firebase.appspot.com",
+        messagingSenderId: "9375093507",
+        appId: "1:9375093507:web:9784aef425d44a1e109f2a",
+        measurementId: "G-DZG1YTDYVT"
+    };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const db = firebase.firestore();
-        // Load saved votes from Firestore when page loads
-db.collection("votes").get().then((querySnapshot) => {
-    querySnapshot.forEach((doc) => {
-        const vote = doc.data();
-        // Find the button for this flat and update its selected state
-        const flatContainer = document.querySelector(`[data-flat="${vote.flatId}"]`);
-        if (flatContainer) {
-            const btn = flatContainer.querySelector(vote.vote ? '.thumbsup' : '.thumbsdown');
-            if (btn) {
-                btn.classList.add('selected');
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const db = firebase.firestore();
+
+    // Create action ID and references
+    const actionId = new Date().getTime().toString();
+    const actionRef = database.ref('actions/' + actionId);
+
+    let votes = {
+        flat1: null,
+        flat2: null,
+        flat3: null,
+        flat4: null,
+        flat5: null
+    };
+
+    // Load saved votes from Firestore when page loads
+    db.collection("votes").get().then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+            const vote = doc.data();
+            const flatContainer = document.querySelector(`[data-flat="${vote.flatId}"]`);
+            if (flatContainer) {
+                const btn = flatContainer.querySelector(vote.vote ? '.emoji-btn:first-child' : '.emoji-btn:last-child');
+                if (btn) {
+                    btn.classList.add('selected');
+                }
             }
-        }
+        });
     });
-});
 
-// Modify the select function to also save to Firestore
-function select(btn, type) {
-    // Keep your existing code here
-    
-    // Add this new part to save to Firestore
-    db.collection("votes").add({
-        flatId: type,
-        vote: btn.textContent === '👍',
-        action: document.getElementById('actionInput').value,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        comments: document.getElementById('commentBox').value
-    })
-    .then(() => {
-        console.log("Vote saved to Firestore!");
-    })
-    .catch((error) => {
-        console.error("Error saving vote: ", error);
-    });
-}      
+    function select(btn, type) {
+        // Remove selection from other buttons in same group
+        let parent = btn.parentElement;
+        parent.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
         
-        // Create a unique ID for this action (you might want to manage this differently)
-        const actionId = new Date().getTime().toString();
-        const actionRef = database.ref('actions/' + actionId);
+        // Select this button
+        btn.classList.add('selected');
+        
+        // Update status text
+        let statusElement = document.getElementById(type + 'Text');
+        statusElement.textContent = 'Selected: ' + btn.textContent;
 
-        let votes = {
-            flat1: null,
-            flat2: null,
-            flat3: null,
-            flat4: null,
-            flat5: null
-        };
+        // Store vote value
+        const vote = btn.textContent === '👍';
 
-        // Listen for action input changes
-        document.getElementById('actionInput').addEventListener('input', function(e) {
-            actionRef.child('actionText').set(e.target.value);
-        });
+        // Store in Realtime Database
+        actionRef.child('votes').child(type).set(vote);
 
-        // Listen for comment changes
-        document.getElementById('commentBox').addEventListener('input', function(e) {
-            actionRef.child('comments').set(e.target.value);
-        });
+        // Store in Firestore
+        db.collection("votes").add({
+            flatId: type,
+            vote: vote,
+            action: document.getElementById('actionInput').value,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            comments: document.getElementById('commentBox').value
+        })
+        .then(() => console.log("Vote saved to Firestore!"))
+        .catch((error) => console.error("Error saving vote: ", error));
 
-        function select(btn, type) {
-            // Remove selection from other buttons in same group
-            let parent = btn.parentElement;
-            parent.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
-            
-            // Select this button
-            btn.classList.add('selected');
-            
-            // Update status text
-            let statusElement = document.getElementById(type + 'Text');
-            statusElement.textContent = 'Selected: ' + btn.textContent;
+        // Update local votes object
+        votes[type] = vote;
 
-            // Store vote in Firebase
-            const vote = btn.textContent === '👍';
-            actionRef.child('votes').child(type).set(vote);
+        // Check unanimous status
+        checkUnanimous();
+    }
 
-            // Update local votes object
-            votes[type] = vote;
-
-            // Check unanimous status
-            checkUnanimous();
+    function checkUnanimous() {
+        let statusDiv = document.getElementById('unanimousStatus');
+        let allVoted = Object.values(votes).every(v => v !== null);
+        
+        if (!allVoted) {
+            statusDiv.textContent = 'Waiting for all votes...';
+            return;
         }
 
-        function checkUnanimous() {
-            let statusDiv = document.getElementById('unanimousStatus');
-            let allVoted = Object.values(votes).every(v => v !== null);
-            
-            if (!allVoted) {
-                statusDiv.textContent = 'Waiting for all votes...';
-                return;
-            }
+        let allApproved = Object.values(votes).every(v => v === true);
+        let allRejected = Object.values(votes).every(v => v === false);
 
-            let allApproved = Object.values(votes).every(v => v === true);
-            let allRejected = Object.values(votes).every(v => v === false);
-
-            if (allApproved) {
-                statusDiv.textContent = '✅ Unanimous Approval';
-                statusDiv.style.color = 'green';
-            } else if (allRejected) {
-                statusDiv.textContent = '❌ Unanimous Rejection';
-                statusDiv.style.color = 'red';
-            } else {
-                statusDiv.textContent = '⚠️ Mixed Votes';
-                statusDiv.style.color = 'orange';
-            }
-
-            // Store status in Firebase
-            actionRef.child('status').set(statusDiv.textContent);
+        if (allApproved) {
+            statusDiv.textContent = '✅ Unanimous Approval';
+            statusDiv.style.color = 'green';
+        } else if (allRejected) {
+            statusDiv.textContent = '❌ Unanimous Rejection';
+            statusDiv.style.color = 'red';
+        } else {
+            statusDiv.textContent = '⚠️ Mixed Votes';
+            statusDiv.style.color = 'orange';
         }
 
-        // Listen for changes in Firebase
-        actionRef.child('votes').on('value', (snapshot) => {
-            const firebaseVotes = snapshot.val();
-            if (firebaseVotes) {
-                votes = firebaseVotes;
-                // Update UI to reflect votes
-                Object.keys(votes).forEach(flatId => {
-                    const buttons = document.querySelectorAll(`button[onclick*="${flatId}"]`);
-                    buttons.forEach(btn => {
-                        btn.classList.remove('selected');
-                        if ((btn.textContent === '👍' && votes[flatId] === true) ||
-                            (btn.textContent === '👎' && votes[flatId] === false)) {
-                            btn.classList.add('selected');
-                        }
-                    });
-                    const statusElement = document.getElementById(flatId + 'Text');
-                    if (votes[flatId] !== null) {
-                        statusElement.textContent = 'Selected: ' + (votes[flatId] ? '👍' : '👎');
+        // Store status in Firebase
+        actionRef.child('status').set(statusDiv.textContent);
+    }
+
+    // Event Listeners
+    document.getElementById('actionInput').addEventListener('input', function(e) {
+        actionRef.child('actionText').set(e.target.value);
+    });
+
+    document.getElementById('commentBox').addEventListener('input', function(e) {
+        actionRef.child('comments').set(e.target.value);
+    });
+
+    // Firebase Realtime Database Listeners
+    actionRef.child('votes').on('value', (snapshot) => {
+        const firebaseVotes = snapshot.val();
+        if (firebaseVotes) {
+            votes = firebaseVotes;
+            Object.keys(votes).forEach(flatId => {
+                const buttons = document.querySelectorAll(`button[onclick*="${flatId}"]`);
+                buttons.forEach(btn => {
+                    btn.classList.remove('selected');
+                    if ((btn.textContent === '👍' && votes[flatId] === true) ||
+                        (btn.textContent === '👎' && votes[flatId] === false)) {
+                        btn.classList.add('selected');
                     }
                 });
-                checkUnanimous();
-            }
-        });
+                const statusElement = document.getElementById(flatId + 'Text');
+                if (votes[flatId] !== null) {
+                    statusElement.textContent = 'Selected: ' + (votes[flatId] ? '👍' : '👎');
+                }
+            });
+            checkUnanimous();
+        }
+    });
 
-        // Listen for action text changes
-        actionRef.child('actionText').on('value', (snapshot) => {
-            const actionText = snapshot.val();
-            if (actionText) {
-                document.getElementById('actionInput').value = actionText;
-            }
-        });
+    actionRef.child('actionText').on('value', (snapshot) => {
+        const actionText = snapshot.val();
+        if (actionText) {
+            document.getElementById('actionInput').value = actionText;
+        }
+    });
 
-        // Listen for comment changes
-        actionRef.child('comments').on('value', (snapshot) => {
-            const comments = snapshot.val();
-            if (comments) {
-                document.getElementById('commentBox').value = comments;
-            }
-        });
-    </script>
+    actionRef.child('comments').on('value', (snapshot) => {
+        const comments = snapshot.val();
+        if (comments) {
+            document.getElementById('commentBox').value = comments;
+        }
+    });
+</script>
 </body>
 </html>
