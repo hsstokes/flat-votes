@@ -147,17 +147,14 @@
         storageBucket: "flat-votes-firebase.appspot.com",
         messagingSenderId: "9375093507",
         appId: "1:9375093507:web:9784aef425d44a1e109f2a",
-        measurementId: "G-DZG1YTDYVT"
+        measurementId: "G-DZG1YTDYVT",
+        databaseURL: "https://flat-votes-firebase-default-rtdb.firebaseio.com" // Added database URL
     };
 
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     const db = firebase.firestore();
-
-    // Create action ID and references
-    const actionId = new Date().getTime().toString();
-    const actionRef = database.ref('actions/' + actionId);
 
     let votes = {
         flat1: null,
@@ -167,21 +164,65 @@
         flat5: null
     };
 
-    // Load saved votes from Firestore when page loads
-    db.collection("votes").get().then((querySnapshot) => {
-        querySnapshot.forEach((doc) => {
-            const vote = doc.data();
-            const flatContainer = document.querySelector(`[data-flat="${vote.flatId}"]`);
-            if (flatContainer) {
-                const btn = flatContainer.querySelector(vote.vote ? '.emoji-btn:first-child' : '.emoji-btn:last-child');
-                if (btn) {
-                    btn.classList.add('selected');
-                }
-            }
-        });
+    // Reference to the latest action
+    const actionsRef = database.ref('actions');
+    let currentActionId;
+
+    // Load or create action ID
+    actionsRef.limitToLast(1).once('value', (snapshot) => {
+        if (snapshot.exists()) {
+            currentActionId = Object.keys(snapshot.val())[0];
+        } else {
+            currentActionId = new Date().getTime().toString();
+        }
+        const actionRef = database.ref('actions/' + currentActionId);
+        setupListeners(actionRef);
+        loadInitialState(actionRef);
     });
 
+    function loadInitialState(actionRef) {
+        actionRef.once('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                // Load votes
+                if (data.votes) {
+                    votes = data.votes;
+                    updateVoteDisplay();
+                }
+                // Load action text
+                if (data.actionText) {
+                    document.getElementById('actionInput').value = data.actionText;
+                }
+                // Load comments
+                if (data.comments) {
+                    document.getElementById('commentBox').value = data.comments;
+                }
+                checkUnanimous();
+            }
+        });
+    }
+
+    function updateVoteDisplay() {
+        Object.keys(votes).forEach(flatId => {
+            const buttons = document.querySelectorAll(`button[onclick*="${flatId}"]`);
+            buttons.forEach(btn => {
+                btn.classList.remove('selected');
+                if ((btn.textContent === '👍' && votes[flatId] === true) ||
+                    (btn.textContent === '👎' && votes[flatId] === false)) {
+                    btn.classList.add('selected');
+                }
+            });
+            const statusElement = document.getElementById(flatId + 'Text');
+            if (votes[flatId] !== null) {
+                statusElement.textContent = 'Selected: ' + (votes[flatId] ? '👍' : '👎');
+            }
+        });
+    }
+
     function select(btn, type) {
+        const vote = btn.textContent === '👍';
+        const actionRef = database.ref('actions/' + currentActionId);
+
         // Remove selection from other buttons in same group
         let parent = btn.parentElement;
         parent.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
@@ -193,27 +234,20 @@
         let statusElement = document.getElementById(type + 'Text');
         statusElement.textContent = 'Selected: ' + btn.textContent;
 
-        // Store vote value
-        const vote = btn.textContent === '👍';
-
-        // Store in Realtime Database
+        // Update votes in Realtime Database
         actionRef.child('votes').child(type).set(vote);
 
         // Store in Firestore
         db.collection("votes").add({
             flatId: type,
             vote: vote,
-            action: document.getElementById('actionInput').value,
+            actionId: currentActionId,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
             comments: document.getElementById('commentBox').value
-        })
-        .then(() => console.log("Vote saved to Firestore!"))
-        .catch((error) => console.error("Error saving vote: ", error));
+        });
 
         // Update local votes object
         votes[type] = vote;
-
-        // Check unanimous status
         checkUnanimous();
     }
 
@@ -241,54 +275,43 @@
         }
 
         // Store status in Firebase
-        actionRef.child('status').set(statusDiv.textContent);
+        database.ref('actions/' + currentActionId + '/status').set(statusDiv.textContent);
     }
 
-    // Event Listeners
-    document.getElementById('actionInput').addEventListener('input', function(e) {
-        actionRef.child('actionText').set(e.target.value);
-    });
+    function setupListeners(actionRef) {
+        // Event Listeners for inputs
+        document.getElementById('actionInput').addEventListener('input', function(e) {
+            actionRef.child('actionText').set(e.target.value);
+        });
 
-    document.getElementById('commentBox').addEventListener('input', function(e) {
-        actionRef.child('comments').set(e.target.value);
-    });
+        document.getElementById('commentBox').addEventListener('input', function(e) {
+            actionRef.child('comments').set(e.target.value);
+        });
 
-    // Firebase Realtime Database Listeners
-    actionRef.child('votes').on('value', (snapshot) => {
-        const firebaseVotes = snapshot.val();
-        if (firebaseVotes) {
-            votes = firebaseVotes;
-            Object.keys(votes).forEach(flatId => {
-                const buttons = document.querySelectorAll(`button[onclick*="${flatId}"]`);
-                buttons.forEach(btn => {
-                    btn.classList.remove('selected');
-                    if ((btn.textContent === '👍' && votes[flatId] === true) ||
-                        (btn.textContent === '👎' && votes[flatId] === false)) {
-                        btn.classList.add('selected');
-                    }
-                });
-                const statusElement = document.getElementById(flatId + 'Text');
-                if (votes[flatId] !== null) {
-                    statusElement.textContent = 'Selected: ' + (votes[flatId] ? '👍' : '👎');
-                }
-            });
-            checkUnanimous();
-        }
-    });
+        // Firebase Realtime Database Listeners
+        actionRef.child('votes').on('value', (snapshot) => {
+            const firebaseVotes = snapshot.val();
+            if (firebaseVotes) {
+                votes = firebaseVotes;
+                updateVoteDisplay();
+                checkUnanimous();
+            }
+        });
 
-    actionRef.child('actionText').on('value', (snapshot) => {
-        const actionText = snapshot.val();
-        if (actionText) {
-            document.getElementById('actionInput').value = actionText;
-        }
-    });
+        actionRef.child('actionText').on('value', (snapshot) => {
+            const actionText = snapshot.val();
+            if (actionText) {
+                document.getElementById('actionInput').value = actionText;
+            }
+        });
 
-    actionRef.child('comments').on('value', (snapshot) => {
-        const comments = snapshot.val();
-        if (comments) {
-            document.getElementById('commentBox').value = comments;
-        }
-    });
+        actionRef.child('comments').on('value', (snapshot) => {
+            const comments = snapshot.val();
+            if (comments) {
+                document.getElementById('commentBox').value = comments;
+            }
+        });
+    }
 </script>
 </body>
 </html>
