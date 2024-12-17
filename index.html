@@ -220,36 +220,53 @@
     }
 
     function select(btn, type) {
-        const vote = btn.textContent === '👍';
-        const actionRef = database.ref('actions/' + currentActionId);
+    const vote = btn.textContent === '👍';
+    
+    // Skip if currentActionId is not set yet
+    if (!currentActionId) {
+        console.warn('Action ID not yet initialized');
+        return;
+    }
 
-        // Remove selection from other buttons in same group
-        let parent = btn.parentElement;
-        parent.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
-        
-        // Select this button
-        btn.classList.add('selected');
-        
-        // Update status text
-        let statusElement = document.getElementById(type + 'Text');
-        statusElement.textContent = 'Selected: ' + btn.textContent;
+    const actionRef = database.ref('actions/' + currentActionId);
 
-        // Update votes in Realtime Database
-        actionRef.child('votes').child(type).set(vote);
+    // Remove selection from other buttons in same group
+    let parent = btn.parentElement;
+    parent.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+    
+    // Select this button
+    btn.classList.add('selected');
+    
+    // Update status text
+    let statusElement = document.getElementById(type + 'Text');
+    statusElement.textContent = 'Selected: ' + btn.textContent;
 
-        // Store in Firestore
-        db.collection("votes").add({
-            flatId: type,
-            vote: vote,
-            actionId: currentActionId,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            comments: document.getElementById('commentBox').value
+    // Update votes in Realtime Database
+    actionRef.child('votes').child(type).set(vote);
+
+    // Store in Firestore with error handling
+    const voteData = {
+        flatId: type,
+        vote: vote,
+        actionId: currentActionId,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    
+    // Only add comments if they exist
+    const comments = document.getElementById('commentBox').value;
+    if (comments) {
+        voteData.comments = comments;
+    }
+
+    db.collection("votes").add(voteData)
+        .catch(error => {
+            console.error("Error writing to Firestore:", error);
         });
 
-        // Update local votes object
-        votes[type] = vote;
-        checkUnanimous();
-    }
+    // Update local votes object
+    votes[type] = vote;
+    checkUnanimous();
+}
 
     function checkUnanimous() {
         let statusDiv = document.getElementById('unanimousStatus');
