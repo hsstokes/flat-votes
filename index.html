@@ -138,17 +138,15 @@
         <textarea id="commentBox" class="comment-box" placeholder="Add your comments here..."></textarea>
     </div>
 
-  <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDkfId7afSaL9xzWcc_CybtDHNdkuGW9Rk",
-            authDomain: "flat-votes-firebase.firebaseapp.com",
-            projectId: "flat-votes-firebase",
-            storageBucket: "flat-votes-firebase.firebasestore.app",
-            messagingSenderId: "9375093507",
-            appId: "1:9375093507:web:9784aef425d44a1e109f2a",
-            measurementId: "G-DZG1YTDYVT"
-        };
+  const firebaseConfig = {
+    apiKey: "AIzaSyDkfId7afSaL9xzWcc_CybtDHNdkuGW9Rk",
+    authDomain: "flat-votes-firebase.firebaseapp.com",
+    projectId: "flat-votes-firebase",
+    storageBucket: "flat-votes-firebase.appspot.com",  // corrected from .firebasestore.app to .appspot.com
+    messagingSenderId: "9375093507",
+    appId: "1:9375093507:web:9784aef425d44a1e109f2a",
+    measurementId: "G-DZG1YTDYVT"
+};‹
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
