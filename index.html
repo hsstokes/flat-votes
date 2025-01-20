@@ -100,40 +100,6 @@
     </div>
 
     <!-- ... the rest of your HTML ... -->
-        <div class="flat-row">
-        <div class="flat-label">Flat 1:</div>
-        <button class="emoji-btn" onclick="select(this, 'flat1')">👍</button>
-        <button class="emoji-btn" onclick="select(this, 'flat1')">👎</button>
-        <div class="status" id="flat1Text"></div>
-    </div>
-
-    <div class="flat-row">
-        <div class="flat-label">Flat 2:</div>
-        <button class="emoji-btn" onclick="select(this, 'flat2')">👍</button>
-        <button class="emoji-btn" onclick="select(this, 'flat2')">👎</button>
-        <div class="status" id="flat2Text"></div>
-    </div>
-
-    <div class="flat-row">
-        <div class="flat-label">Flat 3:</div>
-        <button class="emoji-btn" onclick="select(this, 'flat3')">👍</button>
-        <button class="emoji-btn" onclick="select(this, 'flat3')">👎</button>
-        <div class="status" id="flat3Text"></div>
-    </div>
-
-    <div class="flat-row">
-        <div class="flat-label">Flat 4:</div>
-        <button class="emoji-btn" onclick="select(this, 'flat4')">👍</button>
-        <button class="emoji-btn" onclick="select(this, 'flat4')">👎</button>
-        <div class="status" id="flat4Text"></div>
-    </div>
-
-    <div class="flat-row">
-        <div class="flat-label">Flat 5:</div>
-        <button class="emoji-btn" onclick="select(this, 'flat5')">👍</button>
-        <button class="emoji-btn" onclick="select(this, 'flat5')">👎</button>
-        <div class="status" id="flat5Text"></div>
-    </div>
 
     <div class="vote-summary" id="voteSummary">
         <h4>Overall Vote Status:</h4>
@@ -226,23 +192,34 @@
 
 
           function setupAction() {
-            actionsRef.limitToLast(1).once('value', (snapshot) => {
-                if (snapshot.exists()) {
-                    currentActionId = Object.keys(snapshot.val())[0];
-                    console.log("existing action id:", currentActionId);
-                } else {
-                    currentActionId = new Date().getTime().toString();
-                    console.log("new action id:", currentActionId);
-                    actionsRef.child(currentActionId).set({
-                         actionText: document.getElementById('actionInput').value,
-                         comments: document.getElementById('commentBox').value
-                    });
-                }
-                 actionRef = database.ref('actions/' + currentActionId);
-                 setupListeners();
+             actionsRef.on('value', (snapshot) => {
+                 let actions = snapshot.val();
+                    // clear down the UI
+                    const actionBox = document.querySelector('.action-box');
+                    if(actionBox){
+                        while(actionBox.nextElementSibling && actionBox.nextElementSibling.className == "flat-row"){
+                           actionBox.nextElementSibling.remove()
+                        }
+                    }
+                    // load in all of the action items
+                    if(actions){
+                        Object.keys(actions).forEach(function (key) {
+                          console.log("loading action", key, actions[key])
+                              currentActionId = key;
+                           actionRef = database.ref('actions/' + currentActionId);
+                              // load new action items into the UI
+                                let newDiv = document.createElement('div');
+                                newDiv.classList.add('flat-row')
+                                newDiv.innerHTML = ` <div class="flat-label">Action:</div> <div class="status" >${actions[key].actionText}</div>  <button class="emoji-btn" onclick="select(this, 'flat1')">👍</button> <button class="emoji-btn" onclick="select(this, 'flat1')">👎</button>
+                                    <div class="status" id="flat1Text"></div>`
+
+                               actionBox.parentNode.insertBefore(newDiv, actionBox.nextElementSibling)
+                         });
+                       }
+                setupListeners();
                  loadInitialState();
-             });
-           }
+           });
+       }
         setupAction();
 
            //add a listener to prevent default actions and call a function to create an action
