@@ -87,7 +87,10 @@
         <h2>38 Castle Hill Management</h2>
         <h3>🏗️ Building Actions</h3>
     </div>
-
+    <form id="newActionForm">
+        <input type="text" id="newActionText" placeholder="Enter new action here">
+        <button type="submit">Add Action</button>
+    </form>
    <div class="action-box">
         <label><strong>Action Required:</strong></label>
         <input type="text" id="actionInput" class="action-input" placeholder="Enter the required action/task here...">
@@ -219,7 +222,8 @@
         const actionsRef = database.ref('actions');
         let currentActionId;
         let actionRef;
-        // ... your functions and code here
+
+
           function setupAction() {
             actionsRef.limitToLast(1).once('value', (snapshot) => {
                 if (snapshot.exists()) {
@@ -239,8 +243,31 @@
              });
            }
         setupAction();
- 
 
+           //add a listener to prevent default actions and call a function to create an action
+               const newActionForm = document.getElementById('newActionForm');
+                 newActionForm.addEventListener('submit', function(e){
+                 e.preventDefault();
+                createAction();
+                });
+
+
+              function createAction() {
+                  const actionText = document.getElementById('newActionText').value;
+                    const newActionId = database.ref().push().key;
+                 if(actionText){
+                     console.log("creating new action", actionText, newActionId)
+
+                        database.ref('actions/' + newActionId).set({
+                             actionText: actionText,
+                             comments: "",
+                             status: "Waiting for all votes...",
+                         });
+                    //Clear out the input field
+                     document.getElementById('newActionText').value = "";
+                 }
+
+              }
     function loadInitialState() {
         actionRef.once('value', (snapshot) => {
             const data = snapshot.val();
