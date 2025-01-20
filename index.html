@@ -7,93 +7,97 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
-        /* Previous CSS remains the same */
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 15px;
-        }
-        .title {
-            background: #1976d2;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .action-box {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .action-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #90caf9;
-            border-radius: 5px;
-            margin-top: 5px;
-        }
-        .flat-row {
-            display: flex;
-            align-items: center;
-            margin: 10px 0;
-            padding: 10px;
-            background: #f5f5f5;
-            border-radius: 5px;
-        }
-        .flat-label {
-            width: 80px;
-            font-weight: bold;
-        }
-        .emoji-btn {
-            font-size: 24px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            margin: 5px;
-        }
-        .emoji-btn.selected {
-            background: #e1f5fe;
-            border-radius: 50%;
-        }
-        .comment-box {
-            width: 100%;
-            margin: 10px 0;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        .status {
-            margin-left: 10px;
-            font-size: 14px;
-            color: #666;
-        }
-        .vote-summary {
-            background: #f0f4c3;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-    </style>
+  /* Your existing CSS rules here */
+    body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 15px;
+    }
+    .title {
+        background: #1976d2;
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    .action-box {
+        background: #e3f2fd;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .action-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #90caf9;
+        border-radius: 5px;
+        margin-top: 5px;
+    }
+    .flat-row {
+        display: flex;
+        align-items: center;
+        margin: 10px 0;
+        padding: 10px;
+        background: #f5f5f5;
+        border-radius: 5px;
+    }
+    .flat-label {
+        width: 80px;
+        font-weight: bold;
+    }
+    .emoji-btn {
+        font-size: 24px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        margin: 5px;
+    }
+    .emoji-btn.selected {
+        background: #e1f5fe;
+        border-radius: 50%;
+    }
+    .comment-box {
+        width: 100%;
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+    .status {
+        margin-left: 10px;
+        font-size: 14px;
+        color: #666;
+    }
+    .vote-summary {
+        background: #f0f4c3;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+    }
+</style>
 </head>
 <body>
+    <div id="auth-status">Not Logged in</div>
+    <button id="login-btn" onclick="login()">Login</button>
+    <button id="logout-btn" onclick="logout()">Logout</button>
     <div class="title">
         <h2>38 Castle Hill Management</h2>
         <h3>🏗️ Building Actions</h3>
     </div>
 
-    <div class="action-box">
+   <div class="action-box">
         <label><strong>Action Required:</strong></label>
         <input type="text" id="actionInput" class="action-input" placeholder="Enter the required action/task here...">
         <div style="font-size: 12px; color: #666; margin-top: 5px;">
             Example: "Check windows installation in all flats"
         </div>
     </div>
-    
-    <div class="flat-row">
+
+    <!-- ... the rest of your HTML ... -->
+        <div class="flat-row">
         <div class="flat-label">Flat 1:</div>
         <button class="emoji-btn" onclick="select(this, 'flat1')">👍</button>
         <button class="emoji-btn" onclick="select(this, 'flat1')">👎</button>
@@ -137,53 +141,111 @@
         <p>Comments:</p>
         <textarea id="commentBox" class="comment-box" placeholder="Add your comments here..."></textarea>
     </div>
+     <script>
+        // Firebase configuration (keep your config here)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkfId7afSaL9xzWcc_CybtDHNdkuGW9Rk",
+            authDomain: "flat-votes-firebase.firebaseapp.com",
+            projectId: "flat-votes-firebase",
+            storageBucket: "flat-votes-firebase.appspot.com",
+            messagingSenderId: "9375093507",
+            appId: "1:9375093507:web:9784aef425d44a1e109f2a",
+            measurementId: "G-DZG1YTDYVT",
+            databaseURL: "https://flat-votes-firebase-default-rtdb.firebaseio.com" // Added database URL
+        };
+        // Initialize Firebase (keep this)
+        firebase.initializeApp(firebaseConfig);
+         const database = firebase.database();
+         const db = firebase.firestore();
 
-  <script>
-    // Firebase configuration
-    const firebaseConfig = {
-        apiKey: "AIzaSyDkfId7afSaL9xzWcc_CybtDHNdkuGW9Rk",
-        authDomain: "flat-votes-firebase.firebaseapp.com",
-        projectId: "flat-votes-firebase",
-        storageBucket: "flat-votes-firebase.appspot.com",
-        messagingSenderId: "9375093507",
-        appId: "1:9375093507:web:9784aef425d44a1e109f2a",
-        measurementId: "G-DZG1YTDYVT",
-        databaseURL: "https://flat-votes-firebase-default-rtdb.firebaseio.com" // Added database URL
-    };
+         //Authentication functions and listener
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    const db = firebase.firestore();
+        function login() {
+            firebase.auth().signInWithEmailAndPassword('test@example.com', 'password') //replace with sign in method to use
+                .then((userCredential) => {
+                    console.log("login success", userCredential)
+                })
+                .catch((error) => {
+                   console.error("login fail", error)
+                });
+            }
 
-    let votes = {
-        flat1: null,
-        flat2: null,
-        flat3: null,
-        flat4: null,
-        flat5: null
-    };
+        function logout() {
+                firebase.auth().signOut().then(() => {
+                    console.log("signout success")
+                   }).catch((error) => {
+                    console.error("signout fail", error)
+                   });
+             }
 
-    // Reference to the latest action
-    const actionsRef = database.ref('actions');
-    let currentActionId;
+          firebase.auth().onAuthStateChanged((user) => {
+            const authStatusDiv = document.getElementById('auth-status');
+            const loginBtn = document.getElementById('login-btn');
+            const logoutBtn = document.getElementById('logout-btn');
 
-    // Load or create action ID
-    actionsRef.limitToLast(1).once('value', (snapshot) => {
-        if (snapshot.exists()) {
-            currentActionId = Object.keys(snapshot.val())[0];
-        } else {
-            currentActionId = new Date().getTime().toString();
-        }
-        const actionRef = database.ref('actions/' + currentActionId);
-        setupListeners(actionRef);
-        loadInitialState(actionRef);
-    });
+            if (user) {
+              // User is signed in.
+               console.log("User is logged in: ", user.email);
+                authStatusDiv.textContent = 'Logged in as ' + user.email;
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
 
-    function loadInitialState(actionRef) {
+                firebase.auth().currentUser.getIdTokenResult()
+                   .then((idTokenResult) => {
+                       console.log("User role: ", idTokenResult.claims)
+                       //set user roles in the database
+                 })
+                   .catch(error => console.error("error loading user claims", error));
+
+
+            } else {
+              // User is signed out.
+                authStatusDiv.textContent = 'Not Logged In';
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+            }
+        });
+        //  ... rest of your existing javascript code ...
+       // Example:
+        let votes = {
+            flat1: null,
+            flat2: null,
+            flat3: null,
+            flat4: null,
+            flat5: null
+        };
+
+        // Reference to the latest action
+        const actionsRef = database.ref('actions');
+        let currentActionId;
+        let actionRef;
+        // ... your functions and code here
+          function setupAction() {
+            actionsRef.limitToLast(1).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    currentActionId = Object.keys(snapshot.val())[0];
+                    console.log("existing action id:", currentActionId);
+                } else {
+                    currentActionId = new Date().getTime().toString();
+                    console.log("new action id:", currentActionId);
+                    actionsRef.child(currentActionId).set({
+                         actionText: document.getElementById('actionInput').value,
+                         comments: document.getElementById('commentBox').value
+                    });
+                }
+                 actionRef = database.ref('actions/' + currentActionId);
+                 setupListeners();
+                 loadInitialState();
+             });
+           }
+        setupAction();
+ 
+
+    function loadInitialState() {
         actionRef.once('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
+                 console.log("loadInitialState: ", data)
                 // Load votes
                 if (data.votes) {
                     votes = data.votes;
@@ -203,6 +265,7 @@
     }
 
     function updateVoteDisplay() {
+       console.log("updateVoteDisplay called: ", votes)
         Object.keys(votes).forEach(flatId => {
             const buttons = document.querySelectorAll(`button[onclick*="${flatId}"]`);
             buttons.forEach(btn => {
@@ -220,15 +283,14 @@
     }
 
     function select(btn, type) {
+    console.log("select called:", btn, type);
     const vote = btn.textContent === '👍';
-    
-    // Skip if currentActionId is not set yet
+
     if (!currentActionId) {
         console.warn('Action ID not yet initialized');
         return;
     }
 
-    const actionRef = database.ref('actions/' + currentActionId);
 
     // Remove selection from other buttons in same group
     let parent = btn.parentElement;
@@ -292,48 +354,41 @@
         }
 
         // Store status in Firebase
-        database.ref('actions/' + currentActionId + '/status').set(statusDiv.textContent);
+        actionRef.child('status').set(statusDiv.textContent);
     }
 
-    function setupListeners(actionRef) {
-    // Event Listeners for inputs
-    document.getElementById('actionInput').addEventListener('input', function(e) {
-        db.collection('actions').doc(actionId).update({
-            actionText: e.target.value
+    function setupListeners() {
+      
+        document.getElementById('actionInput').addEventListener('input', function(e) {
+           actionRef.child('actionText').set(e.target.value);
         });
-    });
-
-    document.getElementById('commentBox').addEventListener('input', function(e) {
-        db.collection('actions').doc(actionId).update({
-            comments: e.target.value
+    
+        document.getElementById('commentBox').addEventListener('input', function(e) {
+           actionRef.child('comments').set(e.target.value);
         });
-    });
-
-    // Firestore Realtime Listeners
-    db.collection('actions').doc(actionId)
-        .onSnapshot((doc) => {
-            if (doc.exists) {
-                const data = doc.data();
-                
-                // Update votes
-                if (data.votes) {
-                    votes = data.votes;
-                    updateVoteDisplay();
-                    checkUnanimous();
-                }
-
-                // Update action text
-                if (data.actionText) {
-                    document.getElementById('actionInput').value = data.actionText;
-                }
-
-                // Update comments
-                if (data.comments) {
-                    document.getElementById('commentBox').value = data.comments;
-                }
+       
+        actionRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            // Update votes
+            if (data.votes) {
+                votes = data.votes;
+                updateVoteDisplay();
+                checkUnanimous();
             }
+
+            // Update action text
+            if (data.actionText) {
+                document.getElementById('actionInput').value = data.actionText;
+            }
+
+            // Update comments
+            if (data.comments) {
+                document.getElementById('commentBox').value = data.comments;
+            }
+        }
         });
-}
+    }
 </script>
 </body>
 </html>
