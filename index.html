@@ -185,7 +185,7 @@
             const authStatusDiv = document.getElementById('auth-status');
             const loginBtn = document.getElementById('login-btn');
             const logoutBtn = document.getElementById('logout-btn');
-
+             console.log("onAuthStateChanged called:", user);
             if (user) {
               // User is signed in.
                console.log("User is logged in: ", user.email);
@@ -203,6 +203,7 @@
 
             } else {
               // User is signed out.
+                 console.log("User is logged out");
                 authStatusDiv.textContent = 'Not Logged In';
                 loginBtn.style.display = 'block';
                 logoutBtn.style.display = 'none';
